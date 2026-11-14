@@ -478,6 +478,7 @@ def derive_account(mnemonic: list[str], passphrase: str = "") -> dict:
         "zpub": zpub,
         "descriptor": add_descriptor_checksum(f"wpkh({origin}/0/*)"),
         "descriptor_change": add_descriptor_checksum(f"wpkh({origin}/1/*)"),
+        "descriptor_multipath": add_descriptor_checksum(f"wpkh({origin}/<0;1>/*)"),
     }
 
 

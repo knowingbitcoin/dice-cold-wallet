@@ -13,21 +13,21 @@ PINES (numeración BCM). Son los de la ficha y los ejemplos de Waveshare para el
 Los botones van a masa al pulsarlos: se leen con resistencia interna a 3,3 V.
 
 PREPARACIÓN DE LA RASPBERRY (fuera de este programa, pero imprescindible):
-- Activar SPI (raspi-config → Interface Options → SPI).
-- Quitar la memoria de intercambio, para que la semilla nunca pase a la tarjeta
-  SD: `sudo dphys-swapfile swapoff && sudo systemctl disable dphys-swapfile`.
-- Registros del sistema solo en memoria: Storage=volatile en
-  /etc/systemd/journald.conf. Este programa no imprime nada, pero así ningún
-  mensaje de error podría quedar en la tarjeta.
-- Mejor aún, sistema de ficheros de solo lectura (raspi-config → Performance →
-  Overlay File System).
-- La Pi Zero v1.3 no tiene wifi ni Bluetooth: no conectar nunca un adaptador.
+la lista completa está en el README, apartado «Preparar la Raspberry»: sin
+memoria de intercambio, sin volcados de memoria, registros solo en memoria,
+sistema de ficheros de solo lectura, sin consola serie, sin SSH y sin módulos
+de red. Este programa comprueba al arrancar, y después de cada botón, que no
+hay ninguna interfaz de red aparte de «lo»; si la hay, se bloquea.
 """
 
 from __future__ import annotations
 
+import gc
+import os
 import queue
+import signal
 import time
+import traceback
 
 from PIL import Image, ImageChops
 
@@ -40,6 +40,7 @@ from coldwallet.ui.app import (
     PRESS,
     RIGHT,
     UP,
+    RepeatGuard,
     WalletApp,
 )
 
@@ -149,6 +150,11 @@ class ST7789:
     def blank(self) -> None:
         self.show(Image.new("RGB", (WIDTH, HEIGHT), (0, 0, 0)))
 
+    def off(self) -> None:
+        """Pantalla en negro y luz de fondo apagada."""
+        self.blank()
+        self._bl.off()
+
 
 def to_rgb565(image: Image.Image) -> bytes:
     """Convierte la imagen a RGB565 (dos bytes por píxel) sin numpy.
@@ -170,6 +176,7 @@ class Buttons:
         from gpiozero import Button
 
         self.events: queue.Queue[str] = queue.Queue()
+        self._guard = RepeatGuard()
         self._buttons = []
         for event, pin in BUTTON_PINS.items():
             button = Button(pin, pull_up=True, bounce_time=0.05)
@@ -178,28 +185,81 @@ class Buttons:
 
     def _make_handler(self, event: str):
         def handler() -> None:
-            self.events.put(event)
+            if self._guard.accept(event):
+                self.events.put(event)
 
         return handler
 
 
-def run() -> None:
-    """Bucle principal en la Raspberry."""
-    display = ST7789()
-    buttons = Buttons()
-    app = WalletApp()
+def network_interfaces(root: str = "/sys/class/net") -> list[str]:
+    """Interfaces de red del sistema, sin contar «lo» (la interna del propio aparato)."""
     try:
-        display.show(app.render())
-        while True:
-            event = buttons.events.get()
-            app.handle(event)
-            display.show(app.render())
-            if app.has_pending_work:
-                app.run_pending_work()
-                display.show(app.render())
-    except Exception:
-        # Sin detalles ni trazas: podrían contener datos secretos.
-        app.reset()
-        display.show(WalletApp.render_error())
+        names = os.listdir(root)
+    except OSError:
+        return []
+    return sorted(name for name in names if name != "lo")
+
+
+class _Stop(Exception):
+    """Se lanza al recibir SIGTERM (por ejemplo, con systemctl stop)."""
+
+
+def _on_sigterm(_signum, _frame) -> None:
+    raise _Stop()
+
+
+def _wait_forever(display: ST7789) -> None:
+    try:
         while True:
             time.sleep(3600)
+    except (KeyboardInterrupt, _Stop):
+        display.off()
+
+
+def run() -> None:
+    """Bucle principal en la Raspberry."""
+    signal.signal(signal.SIGTERM, _on_sigterm)
+    display = ST7789()
+    app = WalletApp()
+    outcome = "stop"
+    try:
+        if network_interfaces():
+            outcome = "network"
+        else:
+            buttons = Buttons()
+            display.show(app.render())
+            while True:
+                try:
+                    event = buttons.events.get(timeout=1.0)
+                except queue.Empty:
+                    event = None
+                if network_interfaces():
+                    outcome = "network"
+                    break
+                if event is None:
+                    continue
+                app.handle(event)
+                display.show(app.render())
+                if app.has_pending_work:
+                    app.run_pending_work()
+                    display.show(app.render())
+    except (KeyboardInterrupt, _Stop):
+        outcome = "stop"
+    except Exception as exc:  # sin detalles ni trazas: podrían contener datos secretos
+        # La traza mantiene vivas las variables de cada función (la frase, la
+        # semilla…). Se vacían antes de salir del bloque.
+        traceback.clear_frames(exc.__traceback__)
+        del exc
+        outcome = "error"
+    finally:
+        app.reset()
+        gc.collect()
+
+    if outcome == "stop":
+        display.off()
+        return
+    if outcome == "network":
+        display.show(WalletApp.render_network_warning())
+    else:
+        display.show(WalletApp.render_error())
+    _wait_forever(display)

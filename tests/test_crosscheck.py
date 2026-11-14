@@ -173,7 +173,11 @@ def test_bip84_vectors_both_agree():
 # ---------------------------------------------------------------------------
 
 def _random_rolls(n: int) -> str:
-    return "".join(secrets.choice("123456") for _ in range(n))
+    # Se repite si sale una tirada que la cartera rechazaría (pasa pocas veces).
+    while True:
+        rolls = "".join(secrets.choice("123456") for _ in range(n))
+        if core.rolls_quality_problem(rolls) is None:
+            return rolls
 
 
 # Letras de la frase de contraseña: ASCII, acentos, ñ, euro, ligadura "ﬁ"
@@ -194,11 +198,15 @@ def _mismatch(rolls: str, words: int, passphrase: str) -> str | None:
         return "la frase no coincide"
     info = core.derive_account(m_core, passphrase)
     acc = ind.derive_account(m_ind, passphrase)
-    for field in ("fingerprint", "path", "xpub", "zpub", "descriptor", "descriptor_change"):
+    for field in ("fingerprint", "path", "xpub", "zpub", "descriptor", "descriptor_change",
+                  "descriptor_multipath"):
         if getattr(info, field) != acc[field]:
             return f"el campo {field} no coincide"
     if core.receive_addresses(info, 3) != ind.addresses_from_xpub(acc["xpub"], 0, 3):
         return "las direcciones de cobro no coinciden"
+    first = core.receive_addresses(info, 1)[0]
+    if not core.independent_account_matches(m_core, info, first, passphrase):
+        return "la comprobación del aparato no coincide"
     return None
 
 

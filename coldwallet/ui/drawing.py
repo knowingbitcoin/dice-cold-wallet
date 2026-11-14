@@ -76,6 +76,38 @@ def draw_text(
     )
 
 
+HEX_DIGITS = "0123456789abcdef"
+
+
+@functools.lru_cache(maxsize=None)
+def mono_cell(size: int, charset: str = HEX_DIGITS) -> int:
+    """Ancho fijo de casilla para escribir letra a letra (por ejemplo, la huella)."""
+    widest = max(text_width(ch, size) for ch in charset)
+    return int(widest + 0.999) + 1
+
+
+def draw_mono(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[float, float],
+    text: str,
+    size: int,
+    fill=TEXT,
+    bold: bool = False,
+) -> float:
+    """Escribe cada carácter centrado en una casilla de ancho fijo.
+
+    La fuente no es de ancho fijo; así las columnas quedan alineadas y se
+    compara más fácil con el móvil. Devuelve la x siguiente.
+    """
+    cell = mono_cell(size, HEX_DIGITS if set(text) <= set(HEX_DIGITS) else
+                     "".join(sorted(set(text))))
+    x, y = xy
+    for ch in text:
+        draw_text(draw, (x + cell / 2, y), ch, size, fill, bold, anchor="ma")
+        x += cell
+    return x
+
+
 def wrap(text: str, size: int, max_width: float) -> list[str]:
     """Parte un texto en líneas que caben en max_width píxeles."""
     lines: list[str] = []

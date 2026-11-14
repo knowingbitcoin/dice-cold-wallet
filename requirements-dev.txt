@@ -1,0 +1,6 @@
+# Solo para desarrollar y probar en el Mac. No se instala en la Raspberry.
+embit==0.8.0
+qrcode==8.2
+pillow==13.0.0
+pytest==9.2.0
+zxing-cpp==3.1.1

@@ -1,0 +1,11 @@
+# Dependencias de la cartera que se instalan con pip, fijadas por versión y huella.
+# Pillow, spidev, gpiozero y lgpio se instalan con apt en la Raspberry (ver README).
+#
+# Instalar SIN red en la Raspberry, desde una carpeta con los ficheros ya
+# descargados y comprobados en otro ordenador:
+#   pip install --no-index --find-links /ruta/paquetes --require-hashes \
+#       --no-build-isolation -r requirements.txt
+embit==0.8.0 \
+    --hash=sha256:8bf4b10073c67400370ce523fb16f035fe759f6fdd987c579bdcc268d75ed770
+qrcode==8.2 \
+    --hash=sha256:16e64e0716c14960108e85d853062c9e8bba5ca8252c0b4d0231b9df4060ff4f

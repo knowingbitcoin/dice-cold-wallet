@@ -352,7 +352,39 @@ def test_validate_rolls_rejects_bad_word_count():
 def test_validate_rolls_accepts_good():
     validate_rolls(TEST_ROLLS_24, 24)
     validate_rolls(TEST_ROLLS_12, 12)
-    validate_rolls("6" * 99, 24)
+    validate_rolls(SEEDSIGNER_ROLLS_24, 24)
+    validate_rolls(SEEDSIGNER_ROLLS_12, 12)  # una cara en el 28 %: se acepta
+
+
+@pytest.mark.parametrize(
+    "rolls, words",
+    [
+        ("1" * 99, 24),
+        ("6" * 50, 12),
+        ("12" * 49 + "1", 24),  # el 1 sale en la mitad de las tiradas
+        ("1" * 16 + TEST_ROLLS_24[16:50], 12),  # 16 de 50 = 32 %
+        ("5" * 8 + TEST_ROLLS_24[8:], 24),  # 8 iguales seguidas
+    ],
+)
+def test_degenerate_rolls_rejected(rolls, words):
+    """Tiradas que no parecen al azar dan semillas que se adivinan: se rechazan."""
+    assert core.rolls_quality_problem(rolls)
+    with pytest.raises(ValueError) as excinfo:
+        mnemonic_from_rolls(rolls, words)
+    assert not re.search(r"[1-6]{6,}", str(excinfo.value))
+
+
+def test_quality_limits_exact():
+    # 15 unos de 50 (30 %) se acepta; 16 (32 %), no.
+    fifteen = "1213141516" * 3 + "23456" * 4
+    assert len(fifteen) == 50 and fifteen.count("1") == 15
+    assert core.rolls_quality_problem(fifteen) is None
+    sixteen = fifteen[:-1] + "1"
+    assert sixteen.count("1") == 16
+    assert core.rolls_quality_problem(sixteen)
+    # Racha de 7 iguales se acepta; de 8, no.
+    assert core.rolls_quality_problem("5" * 7 + TEST_ROLLS_24[7:]) is None
+    assert core.rolls_quality_problem("5" * 8 + TEST_ROLLS_24[8:])
 
 
 def test_derive_account_error_does_not_leak_words():
@@ -461,8 +493,21 @@ def test_quiz_options(rolls, words):
             assert len(set(options)) == 4
             assert mnemonic[position - 1] in options
             assert all(o in bip39.WORDLIST for o in options)
-            decoys = [o for o in options if o != mnemonic[position - 1]]
-            assert not set(decoys) & set(mnemonic)
+            # Los señuelos son otras palabras de la misma frase.
+            assert set(options) <= set(mnemonic)
+
+
+def test_quiz_options_short_phrase_fills_from_wordlist():
+    mnemonic = ("abandon " * 11 + "about").split()  # solo 2 palabras distintas
+    for position in (1, 12):
+        options = quiz_options(mnemonic, position)
+        assert len(options) == len(set(options)) == 4
+        assert mnemonic[position - 1] in options
+        assert all(o in bip39.WORDLIST for o in options)
+
+
+def test_quiz_positions_all_words():
+    assert quiz_positions(24, 24) == list(range(1, 25))
 
 
 def test_quiz_options_shuffles():

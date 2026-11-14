@@ -1,0 +1,40 @@
+# Servicio de systemd para arrancar la cartera al encender la Raspberry.
+# SIN PROBAR TODAVÍA EN LA PLACA: revisar con `systemd-analyze verify` y en la Pi.
+#
+# Instalar:
+#   sudo cp deploy/cartera-fria.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable cartera-fria
+[Unit]
+Description=Cartera fría de dados (sin red, no guarda nada)
+After=local-fs.target
+
+[Service]
+Type=simple
+User=cartera
+Group=cartera
+SupplementaryGroups=spi gpio
+# lgpio crea ficheros auxiliares en la carpeta de trabajo: una carpeta en RAM.
+RuntimeDirectory=cartera
+WorkingDirectory=/run/cartera
+# -B: no escribe .pyc · -E: ignora variables PYTHON* · -s: sin paquetes del usuario.
+ExecStart=/opt/cartera/.venv/bin/python -B -E -s /opt/cartera/main.py --hw
+Environment=GPIOZERO_PIN_FACTORY=lgpio
+# Nada sale por la consola ni acaba en el registro del sistema.
+StandardInput=null
+StandardOutput=null
+StandardError=null
+# Sin volcados de memoria.
+LimitCORE=0
+# Sin red: solo sockets locales (AF_UNIX) y ninguna dirección IP.
+# No se usa PrivateNetwork=yes a propósito: dentro de ese espacio aislado el
+# programa vería solo «lo» y no podría avisar de un adaptador de red conectado.
+RestrictAddressFamilies=AF_UNIX
+IPAddressDeny=any
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+Restart=no
+
+[Install]
+WantedBy=multi-user.target
