@@ -43,6 +43,7 @@ from coldwallet.ui.app import (
     RepeatGuard,
     WalletApp,
 )
+from coldwallet.ui import i18n
 
 # Pines BCM (ver el aviso de arriba: confirmar con la ficha de Waveshare).
 PIN_DC = 25
@@ -216,11 +217,12 @@ def _wait_forever(display: ST7789) -> None:
         display.off()
 
 
-def run() -> None:
-    """Bucle principal en la Raspberry."""
+def run(lang: str = i18n.DEFAULT_LANGUAGE) -> None:
+    """Bucle principal en la Raspberry. lang: idioma de la pantalla (en, es o pt)."""
+    lang = i18n.check_language(lang)
     signal.signal(signal.SIGTERM, _on_sigterm)
     display = ST7789()
-    app = WalletApp()
+    app = WalletApp(lang)
     outcome = "stop"
     try:
         if network_interfaces():
@@ -259,7 +261,7 @@ def run() -> None:
         display.off()
         return
     if outcome == "network":
-        display.show(WalletApp.render_network_warning())
+        display.show(WalletApp.render_network_warning(lang))
     else:
-        display.show(WalletApp.render_error())
+        display.show(WalletApp.render_error(lang))
     _wait_forever(display)

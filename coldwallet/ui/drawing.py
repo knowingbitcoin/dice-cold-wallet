@@ -168,7 +168,11 @@ def draw_option(
     selected: bool,
     size: int = 18,
 ) -> None:
-    """Botón de opción: relleno amarillo si está elegido."""
+    """Botón de opción: relleno amarillo si está elegido.
+
+    Si la etiqueta no cabe en el botón (pasa en algún idioma), se reduce la letra.
+    """
+    size = fit_size(label, size, box[2] - box[0] - 8)
     if selected:
         draw.rounded_rectangle(box, radius=8, fill=ACCENT)
         color = ACCENT_TEXT

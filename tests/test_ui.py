@@ -560,6 +560,7 @@ WALLET_SOURCES = [
     ROOT / "coldwallet" / "ui" / "app.py",
     ROOT / "coldwallet" / "ui" / "drawing.py",
     ROOT / "coldwallet" / "ui" / "__init__.py",
+    ROOT / "coldwallet" / "ui" / "i18n.py",
     ROOT / "coldwallet" / "hw.py",
     ROOT / "sim.py",
     ROOT / "main.py",

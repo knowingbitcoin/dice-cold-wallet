@@ -29,6 +29,7 @@ from PIL import Image, ImageDraw
 
 from coldwallet import core
 from coldwallet.ui import drawing as d
+from coldwallet.ui import i18n
 
 # Eventos que entiende la aplicación.
 UP = "UP"
@@ -126,9 +127,15 @@ def _wipe(items: list | None) -> None:
 
 
 class WalletApp:
-    """Estado completo de la cartera. Se crea vacío y se vacía con KEY2."""
+    """Estado completo de la cartera. Se crea vacío y se vacía con KEY2.
 
-    def __init__(self) -> None:
+    lang es el idioma de los textos de la pantalla (en, es o pt). No cambia nada
+    más: las palabras de la frase son siempre las BIP39 en inglés y los botones
+    hacen lo mismo en todos los idiomas. Empezar de nuevo conserva el idioma.
+    """
+
+    def __init__(self, lang: str = i18n.DEFAULT_LANGUAGE) -> None:
+        self.lang = i18n.check_language(lang)
         self._reset_state()
 
     # --- estado ---------------------------------------------------------
@@ -513,6 +520,9 @@ class WalletApp:
 
     # --- dibujo ---------------------------------------------------------
 
+    def _t(self, key: str, **values) -> str:
+        return i18n.t(key, self.lang, **values)
+
     def render(self) -> Image.Image:
         """Imagen nueva de 240x240 con la pantalla actual. No se guarda en ningún sitio."""
         image = Image.new("RGB", (d.WIDTH, d.HEIGHT), d.BG)
@@ -523,26 +533,25 @@ class WalletApp:
         return image
 
     @staticmethod
-    def render_error() -> Image.Image:
+    def render_error(lang: str = i18n.DEFAULT_LANGUAGE) -> Image.Image:
         """Pantalla de error sin ningún detalle (los detalles podrían ser secretos)."""
         image = Image.new("RGB", (d.WIDTH, d.HEIGHT), d.BG)
         draw = ImageDraw.Draw(image)
-        y = d.draw_paragraph(draw, 50, "Algo ha fallado", 24, d.DANGER, bold=True, center=True)
+        y = d.draw_paragraph(draw, 50, i18n.t("error.title", lang), 24, d.DANGER, bold=True, center=True)
         d.draw_paragraph(
-            draw, y + 14, "Apaga el aparato y vuelve a empezar.", 18, center=True
+            draw, y + 14, i18n.t("error.body", lang), 18, center=True
         )
         return image
 
     @staticmethod
-    def render_network_warning() -> Image.Image:
+    def render_network_warning(lang: str = i18n.DEFAULT_LANGUAGE) -> Image.Image:
         """Pantalla que bloquea la cartera si el sistema tiene una conexión de red."""
         image = Image.new("RGB", (d.WIDTH, d.HEIGHT), d.BG)
         draw = ImageDraw.Draw(image)
-        y = d.draw_paragraph(draw, 34, "Hay una conexión de red", 24, d.DANGER, bold=True, center=True)
+        y = d.draw_paragraph(draw, 34, i18n.t("network.title", lang), 24, d.DANGER, bold=True, center=True)
         d.draw_paragraph(
             draw, y + 14,
-            "Una cartera fría no puede tener red. Desconecta el adaptador, "
-            "apaga y vuelve a encender.",
+            i18n.t("network.body", lang),
             17, center=True,
         )
         return image
@@ -550,27 +559,28 @@ class WalletApp:
     def _draw_reset_dialog(self, draw: ImageDraw.ImageDraw) -> None:
         draw.rectangle((0, 0, d.WIDTH, d.HEIGHT), fill=d.BG)
         draw.rounded_rectangle((8, 16, 232, 208), radius=12, fill=d.PANEL)
-        title = "¿Empezar de nuevo?"
+        title = self._t("reset.title")
         d.draw_text(draw, (d.WIDTH / 2, 30), title, d.fit_size(title, 22, 200), bold=True, anchor="ma")
         d.draw_paragraph(
-            draw, 70, "Se borra todo lo que has hecho.", 17, d.MUTED, center=True,
+            draw, 70, self._t("reset.body"), 17, d.MUTED, center=True,
             margin=24,
         )
-        d.draw_option(draw, (20, 146, 114, 190), "No", self._reset_choice == 0, 20)
-        d.draw_option(draw, (126, 146, 220, 190), "Sí, borrar", self._reset_choice == 1, 17)
-        d.draw_help(draw, "◀ ▶ elegir · Pulsa: aceptar")
+        d.draw_option(draw, (20, 146, 114, 190), self._t("reset.no"), self._reset_choice == 0, 20)
+        d.draw_option(draw, (126, 146, 220, 190), self._t("reset.yes"), self._reset_choice == 1, 17)
+        d.draw_help(draw, self._t("help.choose_accept"))
 
     def _draw_bienvenida(self, image, draw) -> None:
-        d.draw_text(draw, (d.WIDTH / 2, 12), "Cartera fría", 30, d.ACCENT, bold=True, anchor="ma")
-        d.draw_text(draw, (d.WIDTH / 2, 56), "Sin red.", 18, anchor="ma")
-        d.draw_text(draw, (d.WIDTH / 2, 78), "No guarda nada.", 18, anchor="ma")
-        d.draw_text(draw, (d.WIDTH / 2, 110), "¿Cuántas palabras?", 17, d.MUTED, anchor="ma")
+        title = self._t("welcome.title")
+        d.draw_text(draw, (d.WIDTH / 2, 12), title, d.fit_size(title, 30, d.WIDTH - 16), d.ACCENT, bold=True, anchor="ma")
+        d.draw_text(draw, (d.WIDTH / 2, 56), self._t("welcome.offline"), 18, anchor="ma")
+        d.draw_text(draw, (d.WIDTH / 2, 78), self._t("welcome.stores_nothing"), 18, anchor="ma")
+        d.draw_text(draw, (d.WIDTH / 2, 110), self._t("welcome.how_many"), 17, d.MUTED, anchor="ma")
         d.draw_option(draw, (16, 136, 114, 180), "12", self.words == 12, 26)
         d.draw_option(draw, (126, 136, 224, 180), "24", self.words == 24, 26)
         d.draw_text(
-            draw, (d.WIDTH / 2, 192), "KEY2: empezar de nuevo", 14, d.MUTED, anchor="ma"
+            draw, (d.WIDTH / 2, 192), self._t("key2.start_over"), 14, d.MUTED, anchor="ma"
         )
-        d.draw_help(draw, "◀ ▶ elegir · Pulsa: empezar")
+        d.draw_help(draw, self._t("welcome.help"))
 
     def _draw_tiradas(self, image, draw) -> None:
         count = len(self._rolls)
@@ -578,9 +588,9 @@ class WalletApp:
         # Contador grande.
         d.draw_text(draw, (12, 6), str(count), 36, d.ACCENT, bold=True)
         number_width = d.text_width(str(count), 36) + 2
-        d.draw_text(draw, (12 + number_width + 8, 20), f"de {total}", 22, d.TEXT)
-        d.draw_text(draw, (228, 10), "Tiradas para", 14, d.MUTED, anchor="ra")
-        d.draw_text(draw, (228, 27), f"{self.words} palabras", 14, d.MUTED, anchor="ra")
+        d.draw_text(draw, (12 + number_width + 8, 20), self._t("rolls.of_total", total=total), 22, d.TEXT)
+        d.draw_text(draw, (228, 10), self._t("rolls.for"), 14, d.MUTED, anchor="ra")
+        d.draw_text(draw, (228, 27), self._t("rolls.words", words=self.words), 14, d.MUTED, anchor="ra")
         # Barra de progreso.
         draw.rectangle((12, 50, 228, 54), fill=d.PANEL)
         draw.rectangle((12, 50, 12 + int(216 * count / total), 54), fill=d.ACCENT)
@@ -611,7 +621,7 @@ class WalletApp:
                     draw, left + c * (size + gap_x), top + r * (size + gap_y), size,
                     face, selected=face == self._cursor,
                 )
-        d.draw_help(draw, "Pulsa: añadir · KEY3: borrar la última")
+        d.draw_help(draw, self._t("rolls.help"))
 
     def _draw_revisar_tiradas(self, image, draw) -> None:
         total = len(self._rolls)
@@ -619,13 +629,13 @@ class WalletApp:
         page = self._review_index // REVIEW_PER_PAGE
         first = page * REVIEW_PER_PAGE
         last = min(total, first + REVIEW_PER_PAGE)
-        d.draw_text(draw, (12, 6), f"Tiradas {first + 1} a {last}", 18, d.ACCENT, bold=True)
+        d.draw_text(draw, (12, 6), self._t("review.title", first=first + 1, last=last), 18, d.ACCENT, bold=True)
         d.draw_text(draw, (228, 8), f"{page + 1}/{pages}", 16, d.MUTED, anchor="ra")
         if self._editing:
-            note = f"Cambias la {self._review_index + 1} · KEY3: deshacer"
+            note = self._t("review.editing", n=self._review_index + 1)
             d.draw_text(draw, (12, 30), note, d.fit_size(note, 14, d.WIDTH - 24), d.OK)
         else:
-            d.draw_text(draw, (12, 30), "Compáralas con tu papel", 14, d.MUTED)
+            d.draw_text(draw, (12, 30), self._t("review.compare"), 14, d.MUTED)
         col_w, row_h = 36, 31
         left, top = 50, 52
         for i in range(first, last):
@@ -643,61 +653,59 @@ class WalletApp:
                 color = d.ACCENT_TEXT
             d.draw_text(draw, (cx, y + 14), self._rolls[i], 24, color, bold=True, anchor="mm")
         if self._editing:
-            d.draw_help(draw, "▲ ▼ cambiar · Pulsa: guardar")
+            d.draw_help(draw, self._t("review.help_editing"))
         else:
-            d.draw_help(draw, "Pulsa: cambiar · KEY1: todo bien, seguir")
+            d.draw_help(draw, self._t("review.help"))
 
     def _draw_confirmar_tiradas(self, image, draw) -> None:
         total = len(self._rolls)
         y = d.draw_paragraph(
-            draw, 8, f"¿Has comparado las {total} tiradas con tu papel?", 18, d.ACCENT,
+            draw, 8, self._t("confirm.question", total=total), 18, d.ACCENT,
             bold=False, center=True,
         )
         d.draw_paragraph(
             draw, y + 8,
-            "Las tiradas son tu frase. Guarda ese papel igual de bien que la frase "
-            "o destrúyelo al terminar.",
+            self._t("confirm.body"),
             15, d.TEXT, center=True,
         )
         options_top = 164
-        d.draw_option(draw, (10, options_top, 116, options_top + 44), "Sí, seguir", self._final_choice == 0, 17)
-        d.draw_option(draw, (124, options_top, 230, options_top + 44), "No, revisar", self._final_choice == 1, 17)
-        d.draw_help(draw, "◀ ▶ elegir · Pulsa: aceptar")
+        d.draw_option(draw, (10, options_top, 116, options_top + 44), self._t("confirm.yes"), self._final_choice == 0, 17)
+        d.draw_option(draw, (124, options_top, 230, options_top + 44), self._t("confirm.no"), self._final_choice == 1, 17)
+        d.draw_help(draw, self._t("help.choose_accept"))
 
     def _draw_tiradas_raras(self, image, draw) -> None:
-        y = d.draw_paragraph(draw, 14, "Estas tiradas no parecen al azar", 22, d.DANGER, bold=True, center=True)
-        y = d.draw_paragraph(draw, y + 8, self._rolls_problem, 16, d.TEXT, center=True)
+        y = d.draw_paragraph(draw, 14, self._t("bad.title"), 22, d.DANGER, bold=True, center=True)
+        y = d.draw_paragraph(draw, y + 8, i18n.rolls_problem(self._rolls_problem, self.lang), 16, d.TEXT, center=True)
         d.draw_paragraph(
             draw, y + 8,
-            "Tira el dado de verdad para cada número. Corrige las tiradas o empieza "
-            "de nuevo con KEY2.",
+            self._t("bad.body"),
             15, d.MUTED, center=True,
         )
-        d.draw_help(draw, "Pulsa: volver a las tiradas")
+        d.draw_help(draw, self._t("bad.help"))
 
     def _draw_aviso(self, image, draw) -> None:
         d.draw_text(draw, (d.WIDTH / 2, 12), "!", 40, d.DANGER, bold=True, anchor="ma")
-        y = d.draw_paragraph(draw, 62, "Que nadie vea la pantalla", 24, d.DANGER, bold=True, center=True)
+        y = d.draw_paragraph(draw, 62, self._t("warning.title"), 24, d.DANGER, bold=True, center=True)
         d.draw_paragraph(
             draw, y + 10,
-            f"Ten a mano papel y lápiz. Vas a ver {len(self._mnemonic)} palabras. "
-            "Después te las preguntaré todas, mirando tu papel.",
+            self._t("warning.body", n=len(self._mnemonic)),
             16, center=True,
         )
-        d.draw_help(draw, "Pulsa: ver las palabras")
+        d.draw_help(draw, self._t("warning.help"))
 
     def _draw_frase(self, image, draw) -> None:
         total = len(self._mnemonic)
         first = self._page * WORDS_PER_PAGE
         d.draw_text(
-            draw, (12, 6), f"Palabras {first + 1} a {first + WORDS_PER_PAGE} de {total}",
+            draw, (12, 6), self._t("phrase.title", first=first + 1, last=first + WORDS_PER_PAGE, total=total),
             16, d.ACCENT, bold=True,
         )
         hint = {
-            PHRASE_FIRST: "Copia estas palabras en papel",
-            PHRASE_FIX: "Corrige tu papel",
-            PHRASE_REVIEW: "Repasa tu papel",
+            PHRASE_FIRST: "phrase.copy",
+            PHRASE_FIX: "phrase.fix",
+            PHRASE_REVIEW: "phrase.review",
         }[self._phrase_mode]
+        hint = self._t(hint)
         d.draw_text(draw, (12, 28), hint, 14, d.MUTED)
         top, step = 56, 40
         for i in range(WORDS_PER_PAGE):
@@ -706,63 +714,64 @@ class WalletApp:
             d.draw_text(draw, (54, y + 17), f"{number}", 22, d.MUTED, anchor="rm")
             d.draw_text(draw, (64, y + 17), self._mnemonic[number - 1], 30, d.TEXT, bold=True, anchor="lm")
         if self._phrase_mode == PHRASE_FIX:
-            help_text = "◀ ▶ páginas · Pulsa: volver al examen"
+            help_text = self._t("phrase.help_fix")
         elif self._phrase_mode == PHRASE_REVIEW:
-            help_text = "◀ ▶ páginas · Pulsa: terminar el repaso"
+            help_text = self._t("phrase.help_review")
         elif self._page < self._pages() - 1:
-            help_text = "◀ atrás · ▶ o Pulsa: siguientes"
+            help_text = self._t("phrase.help_next")
         else:
-            help_text = "◀ atrás · Pulsa: ir al examen"
+            help_text = self._t("phrase.help_last")
         d.draw_help(draw, help_text)
 
     def _draw_examen(self, image, draw) -> None:
         position = self._exam_positions[self._exam_index]
         d.draw_text(
-            draw, (12, 6), f"Examen: {self._exam_index + 1} de {len(self._exam_positions)}",
+            draw, (12, 6), self._t("exam.title", n=self._exam_index + 1, total=len(self._exam_positions)),
             16, d.ACCENT, bold=True,
         )
-        question = f"Mira tu papel. ¿Cuál es la {position}?"
+        question = self._t("exam.question", position=position)
         d.draw_text(draw, (12, 30), question, d.fit_size(question, 20, d.WIDTH - 24), bold=True)
         top, height, gap = 60, 31, 4
         for i, option in enumerate(self._exam_options):
             y = top + i * (height + gap)
             d.draw_option(draw, (12, y, 228, y + height), option, i == self._exam_choice, 22)
-        d.draw_text(draw, (d.WIDTH / 2, 200), "KEY3: no está en mi papel", 14, d.MUTED, anchor="ma")
-        d.draw_help(draw, "▲ ▼ elegir · Pulsa: responder")
+        d.draw_text(draw, (d.WIDTH / 2, 200), self._t("exam.not_on_paper"), 14, d.MUTED, anchor="ma")
+        d.draw_help(draw, self._t("exam.help"))
 
     def _draw_examen_fallado(self, image, draw) -> None:
-        y = d.draw_paragraph(draw, 40, f"Revisa la palabra {self._failed_position}", 22, d.DANGER, bold=True, center=True)
+        y = d.draw_paragraph(draw, 40, self._t("fail.title", position=self._failed_position), 22, d.DANGER, bold=True, center=True)
         d.draw_paragraph(
             draw, y + 14,
-            "Mira esa palabra en la pantalla y corrige tu papel. Después sigue el examen.",
+            self._t("fail.body"),
             17, center=True,
         )
-        d.draw_help(draw, "Pulsa: ver la palabra")
+        d.draw_help(draw, self._t("fail.help"))
 
     def _draw_examen_aprobado(self, image, draw) -> None:
-        d.draw_text(draw, (d.WIDTH / 2, 8), "Examen aprobado", 24, d.OK, bold=True, anchor="ma")
-        y = d.draw_paragraph(draw, 42, "Tu papel coincide.", 17, center=True)
+        title = self._t("passed.title")
+        d.draw_text(draw, (d.WIDTH / 2, 8), title, d.fit_size(title, 24, d.WIDTH - 16), d.OK, bold=True, anchor="ma")
+        y = d.draw_paragraph(draw, 42, self._t("passed.match"), 17, center=True)
         d.draw_paragraph(
             draw, y + 4,
-            "Si sigues al QR, la frase se borra y ya no podrás verla.",
+            self._t("passed.note"),
             15, d.MUTED, center=True,
         )
-        d.draw_option(draw, (12, 134, 228, 166), "Repasar las palabras", self._passed_choice == 0, 18)
-        d.draw_option(draw, (12, 174, 228, 206), "Seguir al QR", self._passed_choice == 1, 18)
-        d.draw_help(draw, "▲ ▼ elegir · Pulsa: aceptar")
+        d.draw_option(draw, (12, 134, 228, 166), self._t("passed.review"), self._passed_choice == 0, 18)
+        d.draw_option(draw, (12, 174, 228, 206), self._t("passed.continue"), self._passed_choice == 1, 18)
+        d.draw_help(draw, self._t("passed.help"))
 
     def _draw_calculando(self, image, draw) -> None:
-        y = d.draw_paragraph(draw, 70, "Calculando la clave pública…", 20, center=True)
+        y = d.draw_paragraph(draw, 70, self._t("deriving.title"), 20, center=True)
         d.draw_paragraph(
-            draw, y + 10, "Se calcula dos veces, de dos formas distintas. Espera unos segundos.",
+            draw, y + 10, self._t("deriving.body"),
             16, d.MUTED, center=True,
         )
 
     def _draw_no_coincide(self, image, draw) -> None:
-        y = d.draw_paragraph(draw, 30, "Los cálculos no coinciden", 24, d.DANGER, bold=True, center=True)
+        y = d.draw_paragraph(draw, 30, self._t("mismatch.title"), 24, d.DANGER, bold=True, center=True)
         d.draw_paragraph(
             draw, y + 14,
-            "No uses esta cartera ni este aparato. No envíes dinero. Apágalo.",
+            self._t("mismatch.body"),
             17, center=True,
         )
 
@@ -780,16 +789,18 @@ class WalletApp:
         # Con el zpub no se enseña la huella maestra: el zpub no la lleva y el
         # iPhone no la mostraría igual. Con el descriptor sí va dentro.
         if self.qr_mode == "zpub":
-            info = "zpub (BlueWallet)"
+            info = self._t("qr.zpub")
         else:
-            info = f"Descriptor · {self.account.fingerprint}"
+            info = self._t("qr.descriptor", fingerprint=self.account.fingerprint)
         text_y = d.HEIGHT - footer / 2
         d.draw_text(draw, (6, text_y), info, 14, d.TEXT, anchor="lm")
         d.draw_text(draw, (d.WIDTH - 6, text_y), "KEY1 ⇄", 14, d.ACCENT, anchor="rm")
 
     def _draw_comprobacion(self, image, draw) -> None:
-        d.draw_text(draw, (d.WIDTH / 2, 4), "Compara con tu iPhone", 18, d.ACCENT, bold=True, anchor="ma")
-        d.draw_text(draw, (12, 30), "Primera dirección de cobro", 15, d.MUTED)
+        title = self._t("check.title")
+        d.draw_text(draw, (d.WIDTH / 2, 4), title, d.fit_size(title, 18, d.WIDTH - 16), d.ACCENT, bold=True, anchor="ma")
+        label = self._t("check.first_address")
+        d.draw_text(draw, (12, 30), label, d.fit_size(label, 15, d.WIDTH - 24), d.MUTED)
         # Bloques de 4 en tres columnas fijas, alineados a la izquierda.
         blocks = d.blocks_of_four(self._first_address)
         col_x = (12, 88, 164)
@@ -797,22 +808,22 @@ class WalletApp:
             row, col = divmod(i, 3)
             size = d.fit_size(block, 20, 70)
             d.draw_text(draw, (col_x[col], 52 + row * 25), block, size)
-        label = "Huella, si usaste el descriptor"
+        label = self._t("check.fingerprint")
         d.draw_text(draw, (12, 154), label, d.fit_size(label, 14, d.WIDTH - 24), d.MUTED)
         d.draw_mono(draw, (12, 172), self.account.fingerprint, 22, bold=True)
-        note = "Con el zpub, compara la dirección."
+        note = self._t("check.zpub_note")
         d.draw_text(draw, (12, 199), note, d.fit_size(note, 14, d.WIDTH - 24), d.MUTED)
-        d.draw_help(draw, "◀ volver al QR · Pulsa: terminar")
+        d.draw_help(draw, self._t("check.help"))
 
     def _draw_fin(self, image, draw) -> None:
-        title = "Apaga el aparato"
+        title = self._t("end.title")
         d.draw_text(draw, (d.WIDTH / 2, 20), title, d.fit_size(title, 26, d.WIDTH - 16), d.ACCENT, bold=True, anchor="ma")
         y = d.draw_paragraph(
-            draw, 64, "La semilla se borra al quitar la corriente.", 17, center=True,
+            draw, 64, self._t("end.body"), 17, center=True,
         )
         d.draw_paragraph(
             draw, y + 10,
-            "Guarda el papel de las tiradas como la frase, o destrúyelo.",
+            self._t("end.paper"),
             15, d.MUTED, center=True,
         )
-        d.draw_help(draw, "KEY2: empezar de nuevo")
+        d.draw_help(draw, self._t("key2.start_over"))
