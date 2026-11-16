@@ -75,6 +75,15 @@ def test_unknown_language_is_rejected():
         i18n.t("no.existe", "en")
 
 
+@pytest.mark.parametrize("value, expected", [
+    ("en", "en"), ("EN", "en"), (" es ", "es"), ("pt", "pt"), ("PT", "pt"),
+    ("pt-BR", "pt"), ("pt_br", "pt"), ("br", "pt"), ("BR", "pt"), ("en-US", "en"),
+    ("es_MX", "es"), ("fr", None), ("", None), ("english", None), ("e", None),
+])
+def test_normalise_language(value, expected):
+    assert i18n.normalise_language(value) == expected
+
+
 def test_core_rolls_problems_are_all_translated():
     """Los dos avisos del núcleo tienen traducción; en español quedan igual."""
     messages = {
@@ -463,18 +472,37 @@ def test_main_lang_option(monkeypatch):
     import sim
     from coldwallet import hw
 
+    # Que la batería dé lo mismo en el Mac y en la propia Raspberry.
+    monkeypatch.setattr(main, "on_raspberry_pi", lambda: False)
     assert main.parse_args(["--hw"]).lang == "es"  # el servicio de systemd no lo pasa
     assert main.parse_args(["--sim", "--lang", "pt"]).lang == "pt"
     assert main.parse_args(["--lang=en", "--otro"]).lang == "en"
-    with pytest.raises(SystemExit), contextlib.redirect_stderr(io.StringIO()):
-        main.parse_args(["--lang", "fr"])
+    assert main.parse_args(["--sim", "--lang", "EN"]).lang == "en"
+    assert main.parse_args(["--hw", "--lang", "pt-BR"]).lang == "pt"
+    assert main.parse_args(["--hw", "--lang=pt_br"]).lang == "pt"
+    assert main.parse_args(["--hw", "--lang", "br"]).lang == "pt"
+    # Fuera del aparato, con un idioma desconocido el programa se para con un error.
+    for argv in (["--lang", "fr"], ["--sim", "--lang", "fr"]):
+        stderr = io.StringIO()
+        with pytest.raises(SystemExit) as stop, contextlib.redirect_stderr(stderr):
+            main.parse_args(argv)
+        assert stop.value.code == 2 and "use en, es or pt" in stderr.getvalue()
+    # En el aparato no: sale en español en vez de dejar la pantalla en negro.
+    assert main.parse_args(["--hw", "--lang", "fr"]).lang == "es"
+    monkeypatch.setattr(main, "on_raspberry_pi", lambda: True)
+    assert main.parse_args(["--lang", "fr"]).lang == "es"
+    assert main.parse_args(["--lang", "EN"]).use_hw
+    monkeypatch.setattr(main, "on_raspberry_pi", lambda: False)
     calls = []
     monkeypatch.setattr(hw, "run", lambda lang="es": calls.append(("hw", lang)))
     monkeypatch.setattr(sim, "run", lambda lang="es": calls.append(("sim", lang)))
     main.main(["--hw"])
     main.main(["--hw", "--lang", "en"])
     main.main(["--sim", "--lang", "pt"])
-    assert calls == [("hw", "es"), ("hw", "en"), ("sim", "pt")]
+    main.main(["--hw", "--lang", "EN"])
+    main.main(["--hw", "--lang", "klingon"])
+    main.main(["--sim", "--lang", "pt-BR"])
+    assert calls == [("hw", "es"), ("hw", "en"), ("sim", "pt"), ("hw", "en"), ("hw", "es"), ("sim", "pt")]
 
 
 def test_hw_run_shows_the_chosen_language(monkeypatch):

@@ -8,10 +8,11 @@
 > - If you build it or use it, **you do so at your own risk**. The software comes with no warranty (see [LICENSE](LICENSE)).
 > - Do not put real savings on a wallet made with it until the code has been reviewed and the device has been tested on the hardware.
 
-![Concept illustration: two hands hold a Raspberry Pi Zero with the Waveshare 1.3-inch LCD HAT on top, next to a die and a sheet of paper. The screen shows the dice entry screen at 37 of 99 rolls.](docs/images/prototype-in-hand-en.jpg)
+![Concept illustration: two hands hold a Raspberry Pi Zero with the Waveshare 1.3-inch LCD HAT on top, next to a die and a sheet of paper. The display shows the dice entry screen at 37 of 99 rolls.](docs/images/prototype-in-hand-en.jpg)
 
-*AI-generated illustration of how the prototype could look. Not a photograph: the prototype has never run on hardware. The
-screen shows a real screenshot from the simulator, with the public test rolls.*
+*AI-generated illustration of how the prototype could look. Not a photograph: the prototype has never run on a real
+Raspberry Pi Zero. The screen area is a real simulator screenshot, made with the public test rolls. Not to scale: the real
+board is 65 x 30 mm and the screen is 1.3 inches.*
 
 A do-it-yourself cold wallet for a Raspberry Pi Zero v1.3 (the version without Wi-Fi or Bluetooth) with a Waveshare
 1.3inch LCD HAT. It has no network and no memory: you switch it on, use it once and switch it off.
@@ -39,6 +40,8 @@ Choose the language with `--lang en`, `--lang es` or `--lang pt`. Spanish is the
 
 On the Pi, add `--lang en` (or `--lang pt`) at the end of the `ExecStart` line in
 [`deploy/cartera-fria.service`](deploy/cartera-fria.service) before you install the unit. Without it the device shows Spanish.
+Upper or lower case both work, and `pt-BR`, `pt_br` or `br` also mean Brazilian Portuguese. With any other value the simulator
+stops with an error, and the device shows Spanish instead, so that its screen is never left dark.
 
 All 26 screens in each language, made with the test rolls and carrying the test-seed band:
 [English](docs/screenshots/en/) · [Spanish](docs/screenshots/es/) · [Brazilian Portuguese](docs/screenshots/pt/).
@@ -83,7 +86,7 @@ safely as the phrase, or destroy it.
 
 **Checked in software (16 Nov 2026):**
 
-- 435 automated tests pass.
+- 450 automated tests pass.
 - Official test vectors: BIP39, BIP32, BIP84 (including the multipath descriptor), BIP173 (address) and the descriptor
   checksum (BIP-380).
 - SeedSigner's two published dice examples (24 and 12 words, from its `docs/dice_verification.md`) give the same words,
@@ -132,7 +135,7 @@ cd dice-cold-wallet
 python3.11 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
 
-.venv/bin/pytest -q                    # the whole test suite (435 tests, about two minutes)
+.venv/bin/pytest -q                    # the whole test suite (450 tests, about two minutes)
 .venv/bin/python main.py --sim         # the simulator (add --lang en or --lang pt to change the language)
 .venv/bin/python scripts/capturas.py   # regenerates the screenshots in docs/capturas/
 .venv/bin/python scripts/capturas.py --lang all   # regenerates docs/screenshots/en/, es/ and pt/
@@ -140,8 +143,8 @@ python3.11 -m venv .venv
 
 Simulator keys: arrow keys = joystick, Enter = press the joystick, `1`, `2`, `3` = KEY1, KEY2, KEY3.
 
-The simulator always shows a red band on top, in the screen's language: *SIMULATOR · TESTS ONLY · DO NOT USE WITH MONEY*
-with `--lang en`, *SIMULADOR · SOLO PRUEBAS · NO USAR CON DINERO* by default. A computer with a network is not a cold
+The simulator always shows a red band on top, in the screen's language: *SIMULATOR · TESTING ONLY · DO NOT USE WITH REAL
+FUNDS* with `--lang en`, *SIMULADOR · SOLO PRUEBAS · NO USAR CON DINERO* by default. A computer with a network is not a cold
 wallet. Use the simulator only with the test rolls below.
 
 ### Test rolls

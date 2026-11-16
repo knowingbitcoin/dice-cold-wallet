@@ -13,8 +13,10 @@
 ![Ilustración conceptual: dos manos sujetan una Raspberry Pi Zero con la pantalla Waveshare 1.3" LCD HAT encima, junto a un dado y una hoja de papel. En la pantalla, la entrada de tiradas en 37 de 99.](docs/images/prototype-in-hand-es.jpg)
 
 *Ilustración generada con IA de cómo podría verse el prototipo. No es una
-fotografía: el prototipo nunca ha funcionado en una Raspberry de verdad. La
-pantalla es una captura real del simulador, con las tiradas de prueba públicas.*
+fotografía: el prototipo nunca ha funcionado en una Raspberry Pi Zero de
+verdad. La zona de la pantalla es una captura real del simulador, hecha con las
+tiradas de prueba públicas. No está a escala: la placa real mide 65 × 30 mm y
+la pantalla, 1,3 pulgadas.*
 
 English: [README.md](README.md) · Guía paso a paso (en inglés):
 https://knowingbitcoin.com/build-your-own-cold-wallet-from-dice/
@@ -43,6 +45,10 @@ sale en español.
 En la Raspberry, añade `--lang en` (o `--lang pt`) al final de la línea
 `ExecStart` de [`deploy/cartera-fria.service`](deploy/cartera-fria.service)
 antes de instalar el servicio (paso 9). Sin él, el aparato sale en español.
+Da igual escribirlo en mayúsculas o en minúsculas, y `pt-BR`, `pt_br` o `br`
+también valen para el portugués de Brasil. Con cualquier otro valor, el
+simulador se para con un error y el aparato sale en español, para que su
+pantalla no se quede nunca en negro.
 
 Las 26 pantallas de cada idioma, hechas con las tiradas de prueba y con la
 franja de semilla de prueba:

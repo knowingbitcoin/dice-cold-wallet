@@ -108,7 +108,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "check.title": "Compara con tu iPhone",
         "check.first_address": "Primera dirección de cobro",
         "check.fingerprint": "Huella, si usaste el descriptor",
-        "check.zpub_note": "Con el zpub, compara la dirección.",
+        "check.zpub_note": "Con zpub, compara la dirección.",
         "check.help": "◀ volver al QR · Pulsa: terminar",
         # Fin.
         "end.title": "Apaga el aparato",
@@ -124,8 +124,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "error.body": "Switch the device off and start again.",
         "network.title": "Network connection found",
         "network.body": (
-            "A cold wallet must have no network. Unplug the adapter, "
-            "switch off and switch on again."
+            "A cold wallet must stay offline. Unplug the adapter, "
+            "then switch the device off and on again."
         ),
         "reset.title": "Start over?",
         "reset.body": "Everything you have done will be erased.",
@@ -158,14 +158,14 @@ STRINGS: dict[str, dict[str, str]] = {
         "bad.face_share": "One face comes up in more than 30% of the rolls.",
         "bad.long_run": "Too many identical rolls in a row.",
         "bad.body": (
-            "Roll the die for real for every number. Correct the rolls or start "
+            "Actually roll the die for every number. Correct the rolls or start "
             "over with KEY2."
         ),
         "bad.help": "Press: back to the rolls",
         "warning.title": "Let no one see the screen",
         "warning.body": (
-            "Get paper and a pencil. You will see {n} words. "
-            "Then I will ask for each one, reading your paper."
+            "Get paper and a pencil to copy {n} words. "
+            "Then I will ask you for each one; answer from your paper."
         ),
         "warning.help": "Press: show the words",
         "phrase.title": "Words {first} to {last} of {total}",
@@ -197,14 +197,14 @@ STRINGS: dict[str, dict[str, str]] = {
         "qr.descriptor": "Descriptor · {fingerprint}",
         "check.title": "Compare with your iPhone",
         "check.first_address": "First receive address",
-        "check.fingerprint": "Fingerprint, with the descriptor",
-        "check.zpub_note": "With the zpub, check the address.",
+        "check.fingerprint": "Fingerprint (descriptor only)",
+        "check.zpub_note": "With zpub, check the address.",
         "check.help": "◀ back to the QR · Press: finish",
         "end.title": "Switch the device off",
         "end.body": "The seed is erased when the power is removed.",
         "end.paper": "Keep the paper with the rolls as safe as the phrase, or destroy it.",
         "sim.title": "Cold wallet · simulator",
-        "sim.banner": "SIMULATOR · TESTS ONLY · DO NOT USE WITH MONEY",
+        "sim.banner": "SIMULATOR · TESTING ONLY · DO NOT USE WITH REAL FUNDS",
         "shots.band": "TEST SEED — DO NOT USE",
     },
     "pt": {
@@ -252,8 +252,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "bad.help": "Aperte: voltar às jogadas",
         "warning.title": "Que ninguém veja a tela",
         "warning.body": (
-            "Tenha papel e lápis à mão. Você vai ver {n} palavras. "
-            "Depois vou perguntar todas, olhando seu papel."
+            "Pegue papel e lápis. Você vai ver {n} palavras. "
+            "Depois vou pedir cada uma; responda olhando o papel."
         ),
         "warning.help": "Aperte: ver as palavras",
         "phrase.title": "Palavras {first} a {last} de {total}",
@@ -292,7 +292,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "end.body": "A semente é apagada quando a energia é cortada.",
         "end.paper": "Guarde o papel das jogadas como a frase, ou destrua-o.",
         "sim.title": "Carteira fria · simulador",
-        "sim.banner": "SIMULADOR · SÓ TESTES · NÃO USE COM DINHEIRO",
+        "sim.banner": "SIMULADOR · SÓ PARA TESTES · NÃO USE COM DINHEIRO",
         "shots.band": "SEMENTE DE TESTE — NÃO USE",
     },
 }
@@ -311,6 +311,19 @@ def check_language(lang: str) -> str:
     if lang not in STRINGS:
         raise ValueError("Idioma desconocido. Usa en, es o pt.")
     return lang
+
+
+def normalise_language(value: str) -> str | None:
+    """Lee lo que se escribe en --lang: «EN», «pt-BR», «pt_br», «br», «es-MX»…
+
+    Devuelve en, es o pt, o None si no reconoce el idioma. «br» y cualquier
+    variante de pt van al portugués de Brasil, que es el único portugués que hay.
+    """
+    tag = value.strip().lower().replace("_", "-")
+    if tag == "br":
+        return "pt"
+    base = tag.split("-", 1)[0]
+    return base if base in STRINGS else None
 
 
 def t(key: str, lang: str = DEFAULT_LANGUAGE, **values: object) -> str:
