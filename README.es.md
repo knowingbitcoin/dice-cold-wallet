@@ -10,12 +10,44 @@
 >   [LICENSE](LICENSE)).
 > - No guardes dinero de verdad en una cartera hecha con él hasta que el código esté revisado y el aparato probado en la placa.
 
+![Ilustración conceptual: dos manos sujetan una Raspberry Pi Zero con la pantalla Waveshare 1.3" LCD HAT encima, junto a un dado y una hoja de papel. En la pantalla, la entrada de tiradas en 37 de 99.](docs/images/prototype-in-hand-es.jpg)
+
+*Ilustración generada con IA de cómo podría verse el prototipo. No es una
+fotografía: el prototipo nunca ha funcionado en una Raspberry de verdad. La
+pantalla es una captura real del simulador, con las tiradas de prueba públicas.*
+
 English: [README.md](README.md) · Guía paso a paso (en inglés):
 https://knowingbitcoin.com/build-your-own-cold-wallet-from-dice/
 
 Cartera fría propia para una Raspberry Pi Zero v1.3 (la que no tiene wifi ni
 Bluetooth) con la pantalla Waveshare 1.3" LCD HAT. Sin red y sin memoria: se
 enciende, se usa una vez y se apaga.
+
+## Pantallas en tres idiomas
+
+Las pantallas del aparato están en español, inglés y portugués de Brasil. Con
+el idioma solo cambia el texto de la pantalla: la frase de recuperación usa
+siempre la lista de palabras BIP39 en inglés, los botones hacen lo mismo y la
+frase y el QR son idénticos en los tres idiomas; la batería de pruebas lo
+comprueba.
+
+![Las mismas cuatro pantallas (bienvenida, entrada de tiradas, palabras 1 a 4 y QR del zpub) en inglés, español y portugués de Brasil, cada una con la franja roja de semilla de prueba.](docs/images/screens-en-es-pt.png)
+
+El idioma se elige con `--lang es`, `--lang en` o `--lang pt`. Si no se indica,
+sale en español.
+
+```bash
+.venv/bin/python main.py --sim --lang en
+```
+
+En la Raspberry, añade `--lang en` (o `--lang pt`) al final de la línea
+`ExecStart` de [`deploy/cartera-fria.service`](deploy/cartera-fria.service)
+antes de instalar el servicio (paso 9). Sin él, el aparato sale en español.
+
+Las 26 pantallas de cada idioma, hechas con las tiradas de prueba y con la
+franja de semilla de prueba:
+[español](docs/screenshots/es/) · [inglés](docs/screenshots/en/) ·
+[portugués de Brasil](docs/screenshots/pt/).
 
 ## Qué hace
 
@@ -70,15 +102,17 @@ cd dice-cold-wallet
 ```
 
 - Flechas = joystick · Intro = pulsar el joystick · 1, 2, 3 = KEY1, KEY2, KEY3.
-- El simulador lleva siempre encima una franja roja: **SIMULADOR · SOLO
-  PRUEBAS · NO USAR CON DINERO**. Un ordenador con red no es una cartera fría.
-  Úsalo solo con las tiradas de prueba de abajo.
+- El simulador lleva siempre encima una franja roja, en el idioma de la
+  pantalla: **SIMULADOR · SOLO PRUEBAS · NO USAR CON DINERO** en español. Un
+  ordenador con red no es una cartera fría. Úsalo solo con las tiradas de
+  prueba de abajo.
 
 Pruebas y capturas:
 
 ```bash
 .venv/bin/pytest -q                   # toda la batería
 .venv/bin/python scripts/capturas.py  # regenera docs/capturas/
+.venv/bin/python scripts/capturas.py --lang all  # regenera docs/screenshots/en/, es/ y pt/
 ```
 
 Para montar el entorno desde cero: `python3.11 -m venv .venv` y
@@ -316,13 +350,18 @@ Todas con las tiradas de prueba y la franja «SEMILLA DE PRUEBA — NO USAR», e
 `21-bienvenida-12` · `22-revisar-tiradas-12` · `23-tiradas-raras` ·
 `24-hay-red` · `25-algo-ha-fallado` · `26-no-coinciden`.
 
+Las mismas pantallas en los tres idiomas, con la franja traducida y los nombres
+de fichero en inglés (`01-welcome`, `03-rolls-37`…), están en
+[`docs/screenshots/`](docs/screenshots/), una carpeta por idioma.
+
 ## Estructura
 
 - `coldwallet/core.py`: tiradas → frase → cuenta (embit), control de tiradas y
   examen.
 - `crosscheck/independent.py`: segunda implementación, solo con la biblioteca
   estándar. La usan las pruebas y también la cartera, para comprobarse.
-- `coldwallet/ui/`: máquina de estados y dibujo de las pantallas.
+- `coldwallet/ui/`: máquina de estados, dibujo de las pantallas y textos de la
+  pantalla en los tres idiomas (`i18n.py`).
 - `coldwallet/hw.py`: pantalla ST7789 y botones de la Raspberry.
 - `sim.py`: simulador en el Mac. `main.py`: punto de entrada.
 - `deploy/cartera-fria.service`: servicio de systemd.

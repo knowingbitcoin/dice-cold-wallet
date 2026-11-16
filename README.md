@@ -8,6 +8,11 @@
 > - If you build it or use it, **you do so at your own risk**. The software comes with no warranty (see [LICENSE](LICENSE)).
 > - Do not put real savings on a wallet made with it until the code has been reviewed and the device has been tested on the hardware.
 
+![Concept illustration: two hands hold a Raspberry Pi Zero with the Waveshare 1.3-inch LCD HAT on top, next to a die and a sheet of paper. The screen shows the dice entry screen at 37 of 99 rolls.](docs/images/prototype-in-hand-en.jpg)
+
+*AI-generated illustration of how the prototype could look. Not a photograph: the prototype has never run on hardware. The
+screen shows a real screenshot from the simulator, with the public test rolls.*
+
 A do-it-yourself cold wallet for a Raspberry Pi Zero v1.3 (the version without Wi-Fi or Bluetooth) with a Waveshare
 1.3inch LCD HAT. It has no network and no memory: you switch it on, use it once and switch it off.
 
@@ -16,7 +21,27 @@ can watch the wallet without being able to spend from it.
 
 - Guide, step by step: https://knowingbitcoin.com/build-your-own-cold-wallet-from-dice/
 - Documentation in Spanish, including the full Raspberry Pi preparation: [README.es.md](README.es.md)
-- The screens on the device are in Spanish for now. Code comments are in Spanish too.
+- The screens on the device are in English, Spanish or Brazilian Portuguese (see
+  [Screens in three languages](#screens-in-three-languages)). Code comments are in Spanish.
+
+## Screens in three languages
+
+Only the text on the screen changes with the language. The recovery phrase always uses the English BIP39 word list, the
+buttons work the same way, and the phrase and the QR code are identical in every language (a test checks this).
+
+![The same four screens (welcome, dice entry, words 1 to 4 and the zpub QR code) in English, Spanish and Brazilian Portuguese, each with the red test-seed band.](docs/images/screens-en-es-pt.png)
+
+Choose the language with `--lang en`, `--lang es` or `--lang pt`. Spanish is the default.
+
+```bash
+.venv/bin/python main.py --sim --lang en
+```
+
+On the Pi, add `--lang en` (or `--lang pt`) at the end of the `ExecStart` line in
+[`deploy/cartera-fria.service`](deploy/cartera-fria.service) before you install the unit. Without it the device shows Spanish.
+
+All 26 screens in each language, made with the test rolls and carrying the test-seed band:
+[English](docs/screenshots/en/) · [Spanish](docs/screenshots/es/) · [Brazilian Portuguese](docs/screenshots/pt/).
 
 ## What it does
 
@@ -56,9 +81,9 @@ safely as the phrase, or destroy it.
 
 ## Checked and not yet checked
 
-**Checked in software (15 Nov 2026):**
+**Checked in software (16 Nov 2026):**
 
-- 415 automated tests pass.
+- 435 automated tests pass.
 - Official test vectors: BIP39, BIP32, BIP84 (including the multipath descriptor), BIP173 (address) and the descriptor
   checksum (BIP-380).
 - SeedSigner's two published dice examples (24 and 12 words, from its `docs/dice_verification.md`) give the same words,
@@ -107,15 +132,17 @@ cd dice-cold-wallet
 python3.11 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
 
-.venv/bin/pytest -q                    # the whole test suite (415 tests, one to two minutes)
-.venv/bin/python main.py --sim         # the simulator
+.venv/bin/pytest -q                    # the whole test suite (435 tests, about two minutes)
+.venv/bin/python main.py --sim         # the simulator (add --lang en or --lang pt to change the language)
 .venv/bin/python scripts/capturas.py   # regenerates the screenshots in docs/capturas/
+.venv/bin/python scripts/capturas.py --lang all   # regenerates docs/screenshots/en/, es/ and pt/
 ```
 
 Simulator keys: arrow keys = joystick, Enter = press the joystick, `1`, `2`, `3` = KEY1, KEY2, KEY3.
 
-The simulator always shows a red band on top: *SIMULADOR · SOLO PRUEBAS · NO USAR CON DINERO* ("simulator · tests only · do
-not use with money"). A computer with a network is not a cold wallet. Use the simulator only with the test rolls below.
+The simulator always shows a red band on top, in the screen's language: *SIMULATOR · TESTS ONLY · DO NOT USE WITH MONEY*
+with `--lang en`, *SIMULADOR · SOLO PRUEBAS · NO USAR CON DINERO* by default. A computer with a network is not a cold
+wallet. Use the simulator only with the test rolls below.
 
 ### Test rolls
 
@@ -133,8 +160,9 @@ first receive address `bc1qvjc0ndgk8ap8uy495enag3qtcl4lua6nn3uyys`.
 Expected result with 12 words (TEST SEED — DO NOT USE): `unveil nice picture region tragic fault cream strike tourist control
 recipe tourist` · fingerprint `85480bc5` · first receive address `bc1q40jg305efx4r2h9nmp7zr25supg58vpzcgx54e`.
 
-The screenshots in [`docs/capturas/`](docs/capturas/) are made from these rolls. Each one carries the band *SEMILLA DE PRUEBA —
-NO USAR* ("test seed — do not use"), and their QR codes encode only the test account.
+The screenshots in [`docs/capturas/`](docs/capturas/) (Spanish) and [`docs/screenshots/`](docs/screenshots/) (one folder per
+language) are made from these rolls. Each one carries the test-seed band in its language (*TEST SEED — DO NOT USE*,
+*SEMILLA DE PRUEBA — NO USAR*, *SEMENTE DE TESTE — NÃO USE*), and their QR codes encode only the test account.
 
 ## Security notes
 
@@ -175,9 +203,9 @@ board yet. In short, for Raspberry Pi OS Lite (Bookworm, Python 3.11):
 - `coldwallet/core.py`: rolls → phrase → account (embit), the roll check and the word quiz.
 - `crosscheck/independent.py`: the second implementation, standard library only. The tests use it, and so does the wallet, to
   check itself.
-- `coldwallet/ui/`: the state machine and the drawing of the screens.
+- `coldwallet/ui/`: the state machine, the drawing of the screens and the screen text in three languages (`i18n.py`).
 - `coldwallet/hw.py`: the ST7789 display and the buttons on the Pi.
-- `sim.py`: the desktop simulator. `main.py`: the entry point (`--sim` or `--hw`).
+- `sim.py`: the desktop simulator. `main.py`: the entry point (`--sim` or `--hw`, and `--lang`).
 - `deploy/cartera-fria.service`: the systemd unit.
 - `tests/`: the tests, with the official BIP39, BIP32, BIP84, BIP173 and BIP-380 vectors and SeedSigner's examples.
 
