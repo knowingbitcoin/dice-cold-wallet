@@ -244,13 +244,17 @@ def test_descriptors_format_and_checksum():
 
 
 def _seedsigner_generate_mnemonic_from_dice(roll_data):
-    """Copia literal de seedsigner.helpers.mnemonic_generation (lista inglesa)."""
+    """Adaptada de generate_mnemonic_from_dice (SeedSigner,
+    src/seedsigner/helpers/mnemonic_generation.py; licencia MIT,
+    Copyright (c) 2021 SeedSigner; ver THIRD_PARTY_NOTICES.md). Solo la lista inglesa."""
     entropy_bytes = hashlib.sha256(roll_data.encode()).digest()
     if len(roll_data) == 50:
         entropy_bytes = entropy_bytes[:16]
     return bip39.mnemonic_from_bytes(entropy_bytes).split()
 
 
+# Ejemplos públicos de SeedSigner (docs/dice_verification.md).
+# SEMILLA DE PRUEBA — NO USAR: cualquiera puede rehacerlas.
 SEEDSIGNER_ROLLS_24 = (
     "655152231316521321611331544441236164664431121534415633526456254462"
     "245546236542364246312613322234612"
@@ -271,6 +275,21 @@ def test_seedsigner_24_words_example():
     words = mnemonic_from_rolls(SEEDSIGNER_ROLLS_24, 24)
     assert " ".join(words) == SEEDSIGNER_WORDS_24
     assert words == _seedsigner_generate_mnemonic_from_dice(SEEDSIGNER_ROLLS_24)
+    # SeedSigner solo publica la huella, la xpub y las direcciones del ejemplo de
+    # 24 palabras en capturas (docs/img/dicedoc/sesi_finger_print.png,
+    # sparrow_wallet_2.png y coleman_addresses.png de su dice_verification.md).
+    # Copiadas a mano de esas capturas el 16 nov 2026. SEMILLA DE PRUEBA — NO USAR.
+    info = derive_account(words)
+    assert info.fingerprint == "634a1f2e"
+    assert info.xpub == (
+        "xpub6BfhisZn1pCf8WkEo4k9Y5MsazGen1aaMpepf5g8diDAtcBb2NCGsFb7Mmha82tt"
+        "m1DFGh4WKjKyfyi51B7zCmoMQZuosPzQA985HaQdjYv"
+    )
+    assert receive_addresses(info, 3) == [
+        "bc1q0my23jqt97f6nurrwqvta2kdr0a9cdjphmamgg",
+        "bc1qe9l64rkqy0tf4g90857aqyupnuh0xaw2rpnslx",
+        "bc1q4clgpukjy44q4quqlt6lwacslwc8evqlwlh4wk",
+    ]
 
 
 def test_seedsigner_12_words_example():

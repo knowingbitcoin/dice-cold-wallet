@@ -3,3 +3,14 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
+
+# Packages downloaded for the offline install (README.es.md, step 1).
+# They are checked by hash and copied to the card; never commit them.
+paquetes/
+*.whl
+*.tar.gz
+
+# Build leftovers
+*.egg-info/
+build/
+dist/

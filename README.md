@@ -1,320 +1,192 @@
-# Cartera fría de dados
+# Dice cold wallet (prototype)
 
-Cartera fría propia para una Raspberry Pi Zero v1.3 (la que no tiene wifi ni
-Bluetooth) con la pantalla Waveshare 1.3" LCD HAT. Sin red y sin memoria: se
-enciende, se usa una vez y se apaga.
+> [!WARNING]
+> **This is a prototype. Do not use it for real savings.**
+>
+> - It has **never run on a real Raspberry Pi Zero**. The display pins are not confirmed and no phone has scanned its QR code.
+> - It has had **no external review**. It has only been checked in software (see [Checked and not yet checked](#checked-and-not-yet-checked)).
+> - If you build it or use it, **you do so at your own risk**. The software comes with no warranty (see [LICENSE](LICENSE)).
+> - Do not put real savings on a wallet made with it until the code has been reviewed and the device has been tested on the hardware.
 
-## Qué hace
+A do-it-yourself cold wallet for a Raspberry Pi Zero v1.3 (the version without Wi-Fi or Bluetooth) with a Waveshare
+1.3inch LCD HAT. It has no network and no memory: you switch it on, use it once and switch it off.
 
-1. Recoge tus tiradas de dado: 99 para una frase de 24 palabras o 50 para una
-   de 12.
-2. Te deja revisar las tiradas en grande, cambiar cualquiera sin volver a
-   meter las demás y te avisa si no parecen al azar.
-3. Calcula la frase BIP39 a partir de las tiradas, te la enseña de cuatro en
-   cuatro y después te pregunta **todas** las palabras, una a una, mirando tu
-   papel.
-4. Calcula la cuenta BIP84 (direcciones `bc1q…`, ruta `m/84'/0'/0'`) **dos
-   veces**, con embit y con una segunda implementación que solo usa la
-   biblioteca estándar de Python. Si no coinciden, no enseña nada.
-5. Enseña un QR con la clave pública de la cuenta para usarla en modo de solo
-   lectura en BlueWallet, Nunchuk o Sparrow. KEY1 cambia entre:
-   - el **zpub**, para BlueWallet;
-   - el **descriptor de dos ramas**
-     `wpkh([huella/84h/0h/0h]xpub…/<0;1>/*)#suma`, que lleva cobro y cambio a
-     la vez (BIP-389) y es el que mejor entienden Sparrow y Nunchuk.
-6. Te pide comparar la primera dirección de cobro (y la huella, si usaste el
-   descriptor) con lo que enseña el móvil.
+It turns your dice rolls into a BIP39 recovery phrase, and shows a QR code of the account's public key so that a wallet app
+can watch the wallet without being able to spend from it.
 
-## Qué no hace
+- Guide, step by step: https://knowingbitcoin.com/build-your-own-cold-wallet-from-dice/
+- Documentation in Spanish, including the full Raspberry Pi preparation: [README.es.md](README.es.md)
+- The screens on the device are in Spanish for now. Code comments are in Spanish too.
 
-- **No firma.** Para gastar hará falta otro aparato o programa que firme con
-  la frase (SeedSigner, Coldcard, Jade o Sparrow en un ordenador sin red).
-- **No guarda nada.** Ni tiradas, ni frase, ni semilla, ni la clave pública.
-  Al apagar, todo desaparece.
-- **No usa frase de contraseña** (la palabra 25). El núcleo la admite y la
-  normaliza bien (NFKD), pero la interfaz no la pide.
-- No tiene red ni la usa: el código de la cartera no importa nada que hable con
-  internet, y en la Raspberry comprueba al arrancar, y tras cada botón, que no
-  hay ninguna interfaz de red aparte de `lo`. Si la hay, se bloquea.
+## What it does
 
-## Lista de la compra
+1. **It takes your dice rolls**: 99 for a 24-word phrase, or 50 for a 12-word phrase. You can review the rolls on screen and
+   change any of them without entering the others again.
+2. **It rejects rolls that do not look random** and asks you to roll again: one face in more than 30 % of the rolls (the same
+   rule as Coldcard), or 8 or more identical rolls in a row (this project's own rule). The code's own simulation of 200,000
+   sets of fair rolls rejects about 0.4 % of honest 99-roll sets and about 3.4 % of 50-roll sets. The check does not catch
+   patterns such as `123456123456…` (the test rolls below pass it), so roll the die every time.
+3. **It turns the rolls into entropy** with the same method as SeedSigner and Coldcard (source code): the SHA-256 of the text of
+   the rolls, using all 32 bytes for 24 words and the first 16 bytes for 12 words. 99 rolls carry about 255.9 bits
+   (99 × log2(6)); 50 rolls carry about 129.2 bits (50 × log2(6)), which is enough for the 128 bits a 12-word phrase uses.
+   **Your rolls are the only source of randomness in the seed.**
+4. **It shows the BIP39 phrase** (English word list) four words at a time, then asks you for **every** word, one by one,
+   reading from your paper.
+5. **It computes the BIP84 account** (`bc1q…` addresses, path `m/84'/0'/0'`) **twice**: once with the
+   [embit](https://github.com/diybitcoinhardware/embit) library and once with a second, independent implementation that uses
+   only Python's standard library. If the two differ, it shows nothing.
+6. **It shows a QR code for watch-only use**. KEY1 switches between:
+   - the **zpub**, for BlueWallet;
+   - the **two-branch descriptor** `wpkh([fingerprint/84h/0h/0h]xpub…/<0;1>/*)#checksum` (BIP-389), which carries receive and
+     change addresses together, for Sparrow and Nunchuk.
+7. **It asks you to compare** the first receive address (and the fingerprint, if you used the descriptor) with what the app
+   shows.
 
-| Pieza | Notas |
+The last screen tells you to switch the device off: the seed is erased when power is removed. Keep the paper with the rolls as
+safely as the phrase, or destroy it.
+
+## What it does not do
+
+- **It does not sign.** To spend, you need another signer that uses the phrase (SeedSigner, Coldcard, Jade, or Sparrow on an
+  offline computer).
+- **It stores nothing.** No rolls, no phrase, no seed, no public key. Everything is gone at power-off.
+- **It has no passphrase (25th word) input.** The core supports one; the interface does not ask for it.
+- **It has no network.** The wallet code imports nothing that talks to the internet. On the Pi it checks at start-up and after
+  every button press that no network interface other than `lo` exists. If one does, it stops.
+
+## Checked and not yet checked
+
+**Checked in software (15 Nov 2026):**
+
+- 415 automated tests pass.
+- Official test vectors: BIP39, BIP32, BIP84 (including the multipath descriptor), BIP173 (address) and the descriptor
+  checksum (BIP-380).
+- SeedSigner's two published dice examples (24 and 12 words, from its `docs/dice_verification.md`) give the same words,
+  fingerprint and addresses.
+- The two independent implementations agree.
+
+**Not yet checked:**
+
+- It has never run on a real Raspberry Pi Zero.
+- The display pins are not confirmed.
+- No phone has scanned its QR code.
+- No external review.
+- No way to spend is part of it (another signer is needed).
+
+## Compatibility
+
+- **SeedSigner**: the same rolls give the same words. This was checked against SeedSigner's two published examples, not on a
+  SeedSigner device.
+- **Coldcard**: the same method (SHA-256 of the roll text), read in Coldcard's source code. The results have not been compared
+  with a Coldcard.
+- **Ian Coleman's BIP39 tool, "Dice" mode**: different results. By default that mode uses the rolls as raw base-6 entropy, with
+  no SHA-256. Do not use it to check your phrase.
+
+## Hardware (proposed, not built)
+
+| Part | Notes |
 |---|---|
-| Raspberry Pi Zero v1.3 (**sin W**) | La v1.3 no tiene radio. No vale la Zero W ni la Zero 2 W. Con los pines ya soldados (o soldarlos), porque la pantalla va pinchada encima. |
-| Waveshare 1.3inch LCD HAT | ST7789, 240×240, joystick de 5 direcciones y botones KEY1, KEY2 y KEY3. |
-| Tarjeta microSD de 8 a 32 GB | De marca. Se graba una vez y se deja en solo lectura. |
-| Batería USB (power bank) y cable micro-USB | Al puerto **PWR** de la Zero, no al de datos. |
-| Lector de tarjetas microSD | Para grabar el sistema desde otro ordenador. |
-| Dado de casino | Mejor que uno de juego: caras planas y esquinas vivas. |
-| Papel y lápiz | Para las tiradas y para la frase. |
+| Raspberry Pi Zero v1.3 | The version **without** Wi-Fi or Bluetooth. The Zero W and the Zero 2 W are not suitable. It needs header pins (soldered), because the display plugs in on top. |
+| Waveshare 1.3inch LCD HAT | ST7789, 240×240 pixels, a 5-way joystick and buttons KEY1, KEY2 and KEY3. It sits on top of the Pi. |
+| microSD card, 8 to 32 GB | Written once and kept read-only. |
+| USB power bank and micro-USB cable | On the Pi's **PWR** port, not the data port. |
+| microSD card reader | To write the system from another computer. |
+| A die | A casino die is preferred. |
+| Paper and pencil | For the rolls and for the phrase. |
 
-## Probar el simulador en el Mac
+The display and button pins in [`coldwallet/hw.py`](coldwallet/hw.py) (BCM numbering) come from Waveshare's documentation
+and are not confirmed on a real board.
 
-```bash
-cd ~/Desarrollo/cold-wallet-dados-zy262
-.venv/bin/python main.py --sim
-```
+## Run the tests and the simulator
 
-- Flechas = joystick · Intro = pulsar el joystick · 1, 2, 3 = KEY1, KEY2, KEY3.
-- El simulador lleva siempre encima una franja roja: **SIMULADOR · SOLO
-  PRUEBAS · NO USAR CON DINERO**. Un ordenador con red no es una cartera fría.
-  Úsalo solo con las tiradas de prueba de abajo.
-
-Pruebas y capturas:
+Tested on macOS with Python 3.11. The simulator needs Tkinter.
 
 ```bash
-.venv/bin/pytest -q                   # toda la batería
-.venv/bin/python scripts/capturas.py  # regenera docs/capturas/
+git clone https://github.com/knowingbitcoin/dice-cold-wallet.git
+cd dice-cold-wallet
+python3.11 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+
+.venv/bin/pytest -q                    # the whole test suite (415 tests, one to two minutes)
+.venv/bin/python main.py --sim         # the simulator
+.venv/bin/python scripts/capturas.py   # regenerates the screenshots in docs/capturas/
 ```
 
-Para montar el entorno desde cero: `python3.11 -m venv .venv` y
-`.venv/bin/pip install -r requirements-dev.txt`.
+Simulator keys: arrow keys = joystick, Enter = press the joystick, `1`, `2`, `3` = KEY1, KEY2, KEY3.
 
-### Tiradas de prueba
+The simulator always shows a red band on top: *SIMULADOR · SOLO PRUEBAS · NO USAR CON DINERO* ("simulator · tests only · do
+not use with money"). A computer with a network is not a cold wallet. Use the simulator only with the test rolls below.
 
-Son públicas. Cualquier semilla que salga de ellas es una **SEMILLA DE
-PRUEBA — NO USAR**.
+### Test rolls
 
-- 24 palabras, 99 tiradas (es `"123456" * 16 + "123"`):
+> **TEST SEED — DO NOT USE.** These rolls are public. Any seed made from them is a test seed: anyone can rebuild it, and
+> anything sent to it can be taken.
+
+- 24 words, 99 rolls (`"123456" * 16 + "123"`):
   `123456123456123456123456123456123456123456123456123456123456123456123456123456123456123456123456123`
-- 12 palabras: las 50 primeras de esa misma cadena.
+- 12 words: the first 50 rolls of the same string.
 
-Ojo: la cadena que venía en el encargo tenía 97 caracteres; la buena es la de
-arriba, que es la que usa el código.
+Expected result with 24 words (TEST SEED — DO NOT USE): `few educate sugar bless boring random strategy waste mutual cargo
+type hawk prefer denial scan abstract filter extend dignity balcony dust unusual correct bubble` · fingerprint `5545de0e` ·
+first receive address `bc1qvjc0ndgk8ap8uy495enag3qtcl4lua6nn3uyys`.
 
-Resultado esperado con 24 palabras:
-`few educate sugar bless boring random strategy waste mutual cargo type hawk
-prefer denial scan abstract filter extend dignity balcony dust unusual correct
-bubble` · huella `5545de0e` · primera dirección
-`bc1qvjc0ndgk8ap8uy495enag3qtcl4lua6nn3uyys`.
+Expected result with 12 words (TEST SEED — DO NOT USE): `unveil nice picture region tragic fault cream strike tourist control
+recipe tourist` · fingerprint `85480bc5` · first receive address `bc1q40jg305efx4r2h9nmp7zr25supg58vpzcgx54e`.
 
-Con 12 palabras: `unveil nice picture region tragic fault cream strike tourist
-control recipe tourist` · huella `85480bc5` · primera dirección
-`bc1q40jg305efx4r2h9nmp7zr25supg58vpzcgx54e`.
+The screenshots in [`docs/capturas/`](docs/capturas/) are made from these rolls. Each one carries the band *SEMILLA DE PRUEBA —
+NO USAR* ("test seed — do not use"), and their QR codes encode only the test account.
 
-## Cómo se convierte el dado en la frase
+## Security notes
 
-Es el mismo método que SeedSigner y Coldcard:
+- **The paper with the rolls is as sensitive as the phrase.** Anyone with the rolls can rebuild the wallet.
+- **The network check.** On the Pi, the program looks for network interfaces at start-up and after every button press. If it
+  finds any interface other than `lo`, it stops and asks you to disconnect the adapter and restart. The systemd service also
+  blocks IP sockets (`RestrictAddressFamilies=AF_UNIX`, `IPAddressDeny=any`).
+- **Python does not guarantee that memory is wiped.** The program drops the rolls and the phrase as soon as it no longer needs
+  them, clears error traces and writes nothing, but the interpreter can leave copies in RAM. Only power-off clears them. That
+  is why the preparation turns off swap and core dumps and keeps logs in memory.
+- **The cryptographic library on the Pi is a different binary.** On the Pi, embit uses its prebuilt
+  `libsecp256k1_linux_armv6l.so` (embit 0.8.0, sha256
+  `dd824bcf6c00f6cb1e1b9db962f4ca981c71d2181633374eb27ac7ca7c1b7f25`), not the one tested on the Mac. This is one reason the
+  wallet recomputes everything with the independent implementation before it shows the QR code. Run the test suite on the Pi
+  itself once.
+- **Pinned dependencies.** `requirements.txt` pins embit and qrcode by version and hash, for an offline install with
+  `pip install --no-index --require-hashes`.
+- **The comparison screen only checks that the QR code was read correctly.** It does not prove that your paper restores the
+  wallet. Before any real funds (and only after review and hardware testing): restore the words from your paper on a second,
+  independent, offline signer; check that the fingerprint and the first receive address match; send a small amount and spend
+  it by signing with that second signer. Only then the rest.
 
-1. Las tiradas se escriben como texto, una cifra por tirada (`"6551…"`).
-2. Se calcula el SHA-256 de ese texto.
-3. Con 24 palabras se usan los 32 bytes; con 12, los 16 primeros.
-4. Esos bytes son la entropía de BIP39, y de ahí sale la frase con la lista
-   inglesa oficial.
+## Preparing the Raspberry Pi (untested)
 
-99 tiradas dan unos 256 bits de entropía (99 × 2,585) y 50 dan unos 129.
-**La única fuente de azar de la semilla son tus tiradas**: si no tiras el dado
-de verdad cada vez, la semilla se puede adivinar.
+The full steps are in Spanish in [README.es.md](README.es.md) ("Preparar la Raspberry"). None of them has been run on a real
+board yet. In short, for Raspberry Pi OS Lite (Bookworm, Python 3.11):
 
-Por eso la cartera rechaza las tiradas si una cara sale en más del 30 % de las
-veces (la misma regla que Coldcard) o si hay 8 o más iguales seguidas. Con un
-dado honrado eso pasa alrededor del 3,4 % de las veces con 50 tiradas y del
-0,4 % con 99; si te toca, vuelve a tirar. El control no detecta patrones como
-`123456123456…` (las tiradas de prueba lo pasan): tira siempre el dado.
+- download and check the packages on another computer, then install them offline with pinned hashes;
+- enable SPI for the display;
+- no swap, no core dumps, logs in memory only;
+- no network services, network and Bluetooth kernel modules blacklisted, no USB gadget networking;
+- no serial console, no automatic login, no automatic updates;
+- the systemd unit in [`deploy/cartera-fria.service`](deploy/cartera-fria.service) (also untested on the board);
+- finally, the read-only overlay file system.
 
-### Comprobarlo contra SeedSigner
+## Project layout
 
-Hazlo **solo con tiradas de prueba**, nunca con las de verdad:
+- `coldwallet/core.py`: rolls → phrase → account (embit), the roll check and the word quiz.
+- `crosscheck/independent.py`: the second implementation, standard library only. The tests use it, and so does the wallet, to
+  check itself.
+- `coldwallet/ui/`: the state machine and the drawing of the screens.
+- `coldwallet/hw.py`: the ST7789 display and the buttons on the Pi.
+- `sim.py`: the desktop simulator. `main.py`: the entry point (`--sim` or `--hw`).
+- `deploy/cartera-fria.service`: the systemd unit.
+- `tests/`: the tests, with the official BIP39, BIP32, BIP84, BIP173 and BIP-380 vectors and SeedSigner's examples.
 
-1. En un SeedSigner (o en su emulador), elige crear una semilla nueva con
-   dados de 24 palabras y mete las 99 tiradas de prueba.
-2. Tiene que salir exactamente la frase de prueba de arriba.
-3. Haz lo mismo con 12 palabras y las 50 tiradas.
+## Reporting a problem
 
-Las pruebas del repositorio ya comparan, con el código de SeedSigner copiado
-tal cual, el ejemplo de 99 y de 50 tiradas que trae su documentación.
+Security issues: please report them privately, as described in [SECURITY.md](SECURITY.md). Never include real rolls, words or
+keys in a report.
 
-## Preparar la Raspberry
+## License
 
-Todo esto se hace **antes de la primera semilla de verdad**, y es la única vez
-que la Raspberry puede ver algo conectado. Los comandos están pensados para
-Raspberry Pi OS Lite (Bookworm, Python 3.11); en Trixie, revisa los nombres de
-los paquetes.
-
-### 1. Paquetes, en otro ordenador
-
-Descarga y comprueba los paquetes en el Mac:
-
-```bash
-mkdir paquetes && cd paquetes
-pip download embit==0.8.0 qrcode==8.2 --no-deps -d .
-shasum -a 256 *
-```
-
-Las huellas tienen que coincidir con las de `requirements.txt`. Copia la
-carpeta `paquetes/` y este repositorio a la tarjeta (por ejemplo a
-`/opt/cartera`).
-
-La librería criptográfica que embit usa en la Raspberry es un binario
-precompilado distinto del que se prueba en el Mac:
-`embit/util/prebuilt/libsecp256k1_linux_armv6l.so`, sha256
-`dd824bcf6c00f6cb1e1b9db962f4ca981c71d2181633374eb27ac7ca7c1b7f25` (embit
-0.8.0). Por eso la cartera rehace todo con la implementación independiente
-antes de enseñar el QR.
-
-### 2. Instalación (con la Raspberry sin red)
-
-```bash
-sudo apt install python3-venv python3-pil python3-spidev python3-gpiozero \
-    python3-lgpio python3-setuptools fonts-dejavu-core
-# (los paquetes de apt también hay que llevarlos ya descargados si la Pi no
-#  tiene red; o hacer este paso una sola vez, antes de la primera semilla,
-#  y quitar después el adaptador)
-cd /opt/cartera
-python3 -m venv --system-site-packages .venv
-.venv/bin/pip install --no-index --find-links /opt/cartera/paquetes \
-    --require-hashes --no-build-isolation -r requirements.txt
-sudo useradd --system --no-create-home --groups spi,gpio cartera
-```
-
-Pasa una vez la batería de pruebas **en la propia Raspberry** (copia también
-pytest como paquete): así se prueba el binario armv6l de verdad. Tardará bastante.
-
-### 3. Activar SPI y la pantalla
-
-`sudo raspi-config` → Interface Options → SPI → sí.
-
-### 4. Sin memoria de intercambio (la semilla nunca pasa a la tarjeta)
-
-```bash
-sudo dphys-swapfile swapoff
-sudo systemctl disable --now dphys-swapfile
-sudo apt purge dphys-swapfile
-# En Trixie: sudo apt purge rpi-swap systemd-zram-generator
-swapon --show   # tiene que salir vacío
-```
-
-### 5. Sin volcados de memoria
-
-```bash
-echo '* hard core 0' | sudo tee /etc/security/limits.d/nocore.conf
-printf 'kernel.core_pattern=|/bin/false\nfs.suid_dumpable=0\n' | \
-    sudo tee /etc/sysctl.d/90-nocore.conf
-```
-
-Si existe systemd-coredump, en `/etc/systemd/coredump.conf` pon
-`Storage=none` y `ProcessSizeMax=0`. El servicio lleva además `LimitCORE=0`.
-
-### 6. Registros solo en memoria
-
-En `/etc/systemd/journald.conf`: `Storage=volatile` (o `none`) y
-`ForwardToSyslog=no`. Después `sudo apt purge rsyslog`.
-
-### 7. Sin red
-
-```bash
-sudo systemctl disable --now ssh NetworkManager dhcpcd wpa_supplicant \
-    avahi-daemon bluetooth ModemManager 2>/dev/null
-sudo tee /etc/modprobe.d/sin-red.conf <<'EOF'
-blacklist usbnet
-blacklist cdc_ether
-blacklist rndis_host
-blacklist r8152
-blacklist asix
-blacklist ax88179_178a
-blacklist cfg80211
-blacklist brcmfmac
-blacklist bluetooth
-EOF
-```
-
-- En `/boot/firmware/config.txt`: **ningún** `dtoverlay=dwc2`; puedes añadir
-  `dtoverlay=disable-wifi` y `dtoverlay=disable-bt` (no estorban).
-- En `/boot/firmware/cmdline.txt`: **ningún** `modules-load=dwc2,g_ether`.
-- No instales `pigpio` ni `pigpiod` (abre un puerto de red).
-
-### 8. Sin consola
-
-- Quita `console=serial0,115200` de `cmdline.txt` y pon `enable_uart=0` en
-  `config.txt`.
-- `sudo systemctl disable serial-getty@ttyS0 serial-getty@ttyAMA0`.
-- Sin inicio de sesión automático en tty1 (`raspi-config` → System Options →
-  Boot / Auto Login → consola con contraseña).
-- `sudo systemctl disable --now apt-daily.timer apt-daily-upgrade.timer`
-  y `sudo apt purge unattended-upgrades`.
-
-### 9. El servicio
-
-```bash
-sudo cp deploy/cartera-fria.service /etc/systemd/system/
-sudo systemd-analyze verify /etc/systemd/system/cartera-fria.service
-sudo systemctl daemon-reload && sudo systemctl enable cartera-fria
-```
-
-El servicio no escribe nada en la consola ni en el registro, no puede abrir
-conexiones de red y no deja volcados de memoria. Está **sin probar en la
-placa**: revísalo con la Pi delante.
-
-### 10. Solo lectura
-
-Al final: `sudo raspi-config` → Performance → Overlay File System → activar y
-dejar también la partición de arranque en solo lectura. `/tmp` queda en
-memoria.
-
-### 11. Uso
-
-Enciende, haz el recorrido y, al acabar, **quita la corriente** y espera unos
-segundos. La memoria se borra al apagar; Python no garantiza borrarla antes.
-
-## Antes de mandar dinero: la prueba de restauración
-
-La pantalla «Compara con tu iPhone» solo comprueba que el QR se leyó bien. Para
-saber que **tu papel** recupera esa cartera:
-
-1. Restaura las palabras de tu papel en un segundo monedero independiente y
-   sin red (SeedSigner, Coldcard, Jade, o Sparrow en un ordenador arrancado sin
-   conexión).
-2. Comprueba que la huella y la primera dirección de cobro son las mismas que
-   enseñó la cartera y que ve el móvil.
-3. Manda primero una cantidad pequeña, y **gástala** firmando con ese segundo
-   monedero a partir del papel. Solo después, el resto.
-
-## Límites conocidos
-
-- **No firma**: para gastar necesitas otro aparato o programa (ver arriba).
-- **Python no borra la memoria de forma garantizada.** La cartera suelta las
-  tiradas y la frase en cuanto dejan de hacer falta, vacía las trazas de error
-  y no escribe nada, pero el intérprete puede dejar copias en RAM hasta que la
-  reutiliza. Lo único que las borra de verdad es apagar. Por eso no hay swap
-  ni volcados de memoria.
-- **Los pines están por confirmar** con la ficha de la placa que llegue
-  (https://www.waveshare.com/wiki/1.3inch_LCD_HAT). Hoy, en numeración BCM:
-  pantalla en SPI0/CE0 con DC = 25, RST = 27 y luz de fondo = 24; joystick
-  arriba 6, abajo 19, izquierda 5, derecha 26 y pulsar 13; KEY1 21, KEY2 20 y
-  KEY3 16.
-- **El QR mide unos 21 mm** en la pantalla de 1,3" (módulos de unos 0,4 mm). Hay
-  que probar en la Pi que BlueWallet, Nunchuk y Sparrow lo leen. Si no, falta
-  añadir una salida alternativa (zpub en texto o QR animado).
-- **La doble pulsación** se filtra por programa (se descarta una segunda
-  pulsación del centro, KEY1 o KEY3 antes de 0,35 s). Hay que comprobar en la
-  placa que al pulsar el centro del joystick no llega también una dirección.
-- El cálculo doble tarda unos 0,1 s en el Mac; en la Pi Zero, previsiblemente
-  unos segundos. Está por medir.
-
-## Capturas
-
-Todas con las tiradas de prueba y la franja «SEMILLA DE PRUEBA — NO USAR», en
-`docs/capturas/`:
-
-`01-bienvenida` · `02-tiradas-vacio` · `03-tiradas-37` ·
-`04-empezar-de-nuevo` · `05-revisar-tiradas` · `06-cambiar-una-tirada` ·
-`07-revisar-tiradas-ultima-pagina` · `08-confirmar-tiradas` · `09-aviso` ·
-`10-frase-1-a-4` · `11-frase-21-a-24` · `12-examen` · `13-examen-fallado` ·
-`14-frase-corregir` · `15-examen-aprobado` · `16-calculando` ·
-`17-qr-zpub` · `18-qr-descriptor` · `19-comprobacion` · `20-fin` ·
-`21-bienvenida-12` · `22-revisar-tiradas-12` · `23-tiradas-raras` ·
-`24-hay-red` · `25-algo-ha-fallado` · `26-no-coinciden`.
-
-## Estructura
-
-- `coldwallet/core.py`: tiradas → frase → cuenta (embit), control de tiradas y
-  examen.
-- `crosscheck/independent.py`: segunda implementación, solo con la biblioteca
-  estándar. La usan las pruebas y también la cartera, para comprobarse.
-- `coldwallet/ui/`: máquina de estados y dibujo de las pantallas.
-- `coldwallet/hw.py`: pantalla ST7789 y botones de la Raspberry.
-- `sim.py`: simulador en el Mac. `main.py`: punto de entrada.
-- `deploy/cartera-fria.service`: servicio de systemd.
-- `tests/`: pruebas, con los vectores oficiales de BIP39, BIP32, BIP84, BIP173,
-  BIP-380 y los ejemplos de SeedSigner.
+MIT, see [LICENSE](LICENSE). Third-party material (the DejaVu font, the BIP39 word list, test vectors and a short snippet
+adapted from SeedSigner) is listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
